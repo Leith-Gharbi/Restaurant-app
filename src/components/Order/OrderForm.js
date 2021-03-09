@@ -1,30 +1,60 @@
-import { Grid } from '@material-ui/core';
-import React, { useState } from 'react';
+import {
+  ButtonGroup,
+  Grid,
+  InputAdornment,
+  makeStyles,
+  Button as MuiButton,
+} from '@material-ui/core';
+import React, { useState, useEffect } from 'react';
 import Form from '../../layouts/Form';
-
+import ReplayIcon from '@material-ui/icons/Replay';
+import RestaurantMenuIcon from '@material-ui/icons/RestaurantMenu';
+import ReorderIcon from '@material-ui/icons/Reorder';
 import { Input, Select, Button } from '../../components/controls';
-import useForm from '../../hooks/useForm';
+import { createAPIEndpoint ,ENDPOINTS} from "../../api";
 
 const pMethod = [
   { id: 'none', title: 'Select' },
   { id: 'Cash', title: 'Cash' },
   { id: 'Card', title: 'Card' },
 ];
-const generateOrderNumber = () =>
-  Math.floor(100000 + Math.random() * 900000).toString();
-const getFreshModelObject = () => ({
-  orderMasterId: 0,
-  orderNumber: generateOrderNumber(),
-  customerId: 0,
-  pMethode: 'none',
-  gTotatl: 0,
-  deletedOrderItemIds: '',
-  orderDetails: [],
-});
+const useStyles = makeStyles((theme) => ({
+  adornmentText: {
+    '& .MuiTypography-root': {
+      color: '#f3b33d',
+      fontWeight: 'bolder',
+      fontSize: '1.5em',
+    },
+  },
+  submitbuttonGroup: {
+    backgroundColor: '#f3b33d',
+    margin: theme.spacing(1),
+    color: '#000',
+    '& .MuiButton-label': {
+      textTransform: 'none',
+    },
+    '&:hover': {
+      backgoundColor: '#f3b33d',
+    },
+  },
+}));
 
+export default function OrderForm(props) {
+  const { values, errors, handelInputChange } = props;
+  const classes = useStyles();
 
-export default function OrderForm() {
- const {values,setValues,errors,setErrors,handelInputChange,resetFormContols}=useForm(getFreshModelObject);
+  const [customerList,SetcustomerList] =useState([]);
+  useEffect(() => {}, []);
+  createAPIEndpoint(ENDPOINTS.CUSTOMER).fetchAll()
+  .then(res =>{
+    let customerList = res.data.map(item => ({
+      id: item.customerId,
+      title: item.customerName
+    }));
+    customerList = [{ id:0 , title:'Select'}].concat(customerList);
+    SetcustomerList(customerList);
+  })
+  .catch(err => console.log(err))
   return (
     <Form>
       <Grid container>
@@ -34,26 +64,31 @@ export default function OrderForm() {
             name="orderNumber"
             disabled
             value={values.orderNumber}
-          ></Input>
+            InputProps={{
+              startAdornment: (
+                <InputAdornment
+                  className={classes.adornmentText}
+                  position="start"
+                >
+                  #
+                </InputAdornment>
+              ),
+            }}
+          />
           <Select
             label="Customer"
-            name="customer"
+            name="customerId"
             value={values.customerId}
-            onchange={handelInputChange}
-            options={[
-              { id: 0, title: 'Select' },
-              { id: 1, title: 'Customer 1' },
-              { id: 2, title: 'Customer 2' },
-              { id: 3, title: 'Customer 3' },
-            ]}
+            onChange={handelInputChange}
+            options={customerList}
           ></Select>
         </Grid>
         <Grid item xs={6}>
           <Select
             label="Payment Methode"
-            name="pMethod"
+            name="pMethode"
             options={pMethod}
-            onchange={handelInputChange}
+            onChange={handelInputChange}
             value={values.pMethode}
           ></Select>
           <Input
@@ -61,7 +96,30 @@ export default function OrderForm() {
             name="gTotal"
             value={values.gTotatl}
             disabled
-          ></Input>
+            InputProps={{
+              startAdornment: (
+                <InputAdornment
+                  className={classes.adornmentText}
+                  position="start"
+                >
+                  $
+                </InputAdornment>
+              ),
+            }}
+          />
+          <ButtonGroup className={classes.submitbuttonGroup}>
+            <MuiButton
+              size="large"
+              type="submit"
+              endIcon={<RestaurantMenuIcon />}
+            >
+              Submit
+            </MuiButton>
+            <MuiButton size="small" startIcon={<ReplayIcon />}></MuiButton>
+          </ButtonGroup>
+          <Button size="large" startIcon={<ReorderIcon></ReorderIcon>}>
+            Orders
+          </Button>
         </Grid>
       </Grid>
     </Form>
