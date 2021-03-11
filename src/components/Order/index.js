@@ -1,6 +1,6 @@
 import React from 'react';
 import OrderForm from './OrderForm.js';
-import {UseForm} from '../../hooks/useForm';
+import { UseForm } from '../../hooks/useForm';
 import SearchFoodItems from './SearchFoodItems.js';
 import OrdredFoodItems from './OrdredFoodItems.js';
 import { Grid } from '@material-ui/core';
@@ -11,15 +11,13 @@ const getFreshModelObject = () => ({
   orderMasterId: 0,
   orderNumber: generateOrderNumber(),
   customerId: 0,
-  pMethode: 'none',
-  gTotatl: 0,
+  pMethod: 'none',
+  gTotal: 0,
   deletedOrderItemIds: '',
-  orderDetails: [],
+  orderDetails: []
 });
 
-
 const index = () => {
-
   const {
     values,
     setValues,
@@ -29,36 +27,21 @@ const index = () => {
     resetFormContols,
   } = UseForm(getFreshModelObject);
 
-const addFoodItem = foodItem =>{
-
-  let x = {
-    OrderMasterId :values.orderMasterId,
-    OrderDetailId:0,
-    FoodItemId:foodItem.foodItemId,
-    quantity:1,
-    foodItemPrice:foodItem.price,
-    foodItemName:foodItem.foodItemName,
-  }
-  setValues({
-    ...values,orderDetails:[...values.orderDetails,x]
-  })
-}
-
-
-  return ( <Grid container spacing={2}>
-    <Grid item xs={12}>
-    <OrderForm {...{ values, errors, handelInputChange }} />
+  return (
+    <Grid container spacing={2}>
+      <Grid item xs={12}>
+        <OrderForm {...{ values, setValues, errors,setErrors, handelInputChange ,resetFormContols}} />
+      </Grid>
+      <Grid item xs={6}>
+        <SearchFoodItems {...{ values, setValues }} />
+      </Grid>
+      <Grid item xs={6}>
+        <OrdredFoodItems
+          {...{ ordredFoodItems: values.orderDetails, values, setValues }}
+        />
+      </Grid>
     </Grid>
-    <Grid item xs={6}>
-      <SearchFoodItems {... {addFoodItem,ordredFoodItems:values.orderDetails}}/>
-    </Grid>
-    <Grid item xs={6}>
-      <OrdredFoodItems {... {ordredFoodItems:values.orderDetails ,values,setValues}}/>
-    </Grid>
-   
-    
-  </Grid>)
- 
+  );
 };
 
 export default index;
