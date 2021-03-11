@@ -11,8 +11,10 @@ import ReplayIcon from '@material-ui/icons/Replay';
 import RestaurantMenuIcon from '@material-ui/icons/RestaurantMenu';
 import ReorderIcon from '@material-ui/icons/Reorder';
 import { Input, Select, Button } from '../../components/controls';
-import { createAPIEndpoint ,ENDPOINTS} from "../../api";
-
+import { createAPIEndpoint, ENDPOINTS } from '../../api';
+import { roundTo2DecimalPoint } from '../../utils';
+import Popup from '../../layouts/Popup';
+import OrderList from "./OrderList";
 const pMethod = [
   { id: 'none', title: 'Select' },
   { id: 'Cash', title: 'Cash' },
@@ -40,23 +42,83 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 export default function OrderForm(props) {
-  const { values, errors, handelInputChange } = props;
+  const { values, setValues, errors, setErrors, handelInputChange ,resetFormContols } = props;
   const classes = useStyles();
 
-  const [customerList,SetcustomerList] =useState([]);
-  useEffect(() => {}, []);
-  createAPIEndpoint(ENDPOINTS.CUSTOMER).fetchAll()
-  .then(res =>{
-    let customerList = res.data.map(item => ({
-      id: item.customerId,
-      title: item.customerName
-    }));
-    customerList = [{ id:0 , title:'Select'}].concat(customerList);
-    SetcustomerList(customerList);
-  })
-  .catch(err => console.log(err))
+  const [customerList, SetcustomerList] = useState([]);
+
+  const[orderListVisibility,setOrderListVisibility]= useState(false);
+  const[orderId,setOrderId]= useState(0);
+
+
+  useEffect(() => {
+    createAPIEndpoint(ENDPOINTS.CUSTOMER)
+      .fetchAll()
+      .then((res) => {
+        let customerList = res.data.map((item) => ({
+          id: item.customerId,
+          title: item.customerName,
+        }));
+        customerList = [{ id: 0, title: 'Select' }].concat(customerList);
+        SetcustomerList(customerList);
+      })
+      .catch((err) => console.log(err));
+  }, []);
+
+  useEffect(() => {
+    let gTotal = values.orderDetails.reduce((tempTotal, item) => {
+      return tempTotal + item.quantity * item.foodItemPrice;
+    }, 0);
+    setValues({ ...values, gTotal: roundTo2DecimalPoint(gTotal) });
+  }, [JSON.stringify(values.orderDetails)]);
+
+
+useEffect(() => {
+  if(orderId==0) resetFormContols()
+  else {
+    reateAPIEndpoint(ENDPOINTS.ORDER)
+      .fetchById(orderId)
+      .then((res) => {
+        let customerList = res.data.map((item) => ({
+          id: item.customerId,
+          title: item.customerName,
+        }));
+        customerList = [{ id: 0, title: 'Select' }].concat(customerList);
+        SetcustomerList(customerList);
+      })
+      .catch((err) => console.log(err));
+  }
+}, [orderId])
+
+  const validateForm = () => {
+    let temp = {};
+    temp.customerId = values.customerId != 0 ? '' : 'this field is required';
+    temp.pMethod = values.pMethod != 'none' ? '' : 'this field is required';
+    temp.orderDetails =
+      values.orderDetails.length != 0 ? '' : 'this field is required';
+    console.log(values.pMethod);
+    setErrors({ ...temp });
+    return Object.values(temp).every((x) => x === '');
+  };
+  const submitOrder = (e) => {
+    e.preventDefault();
+    if (validateForm()) {
+      console.log(values)
+      createAPIEndpoint(ENDPOINTS.ORDER)
+        .create(values)
+        .then((res) => {
+          console.log(res);
+          resetFormContols();
+        })
+        .catch((err) => console.log(err));
+    }
+  };
+  const openListOfOrders = () =>{
+    setOrderListVisibility(true);
+  }
   return (
-    <Form>
+    <>
+    <Form onSubmit={submitOrder}>
       <Grid container>
         <Grid item xs={6}>
           <Input
@@ -81,20 +143,22 @@ export default function OrderForm(props) {
             value={values.customerId}
             onChange={handelInputChange}
             options={customerList}
+            error={errors.customerId}
           ></Select>
         </Grid>
         <Grid item xs={6}>
           <Select
             label="Payment Methode"
-            name="pMethode"
+            name="pMethod"
             options={pMethod}
             onChange={handelInputChange}
-            value={values.pMethode}
+            value={values.pMethod}
+            error={errors.pMethod}
           ></Select>
           <Input
             label="Grand Total"
             name="gTotal"
-            value={values.gTotatl}
+            value={values.gTotal}
             disabled
             InputProps={{
               startAdornment: (
@@ -117,11 +181,15 @@ export default function OrderForm(props) {
             </MuiButton>
             <MuiButton size="small" startIcon={<ReplayIcon />}></MuiButton>
           </ButtonGroup>
-          <Button size="large" startIcon={<ReorderIcon></ReorderIcon>}>
+          <Button size="large" onClick={openListOfOrders} startIcon={<ReorderIcon></ReorderIcon>}>
             Orders
           </Button>
         </Grid>
       </Grid>
     </Form>
+    <Popup  title="List of Orders" openPopup={orderListVisibility} setOpenPopup={setOrderListVisibility}>
+<OrderList {...{setOrderId ,setOrderListVisibility}}/>
+    </Popup>
+    </>
   );
 }
