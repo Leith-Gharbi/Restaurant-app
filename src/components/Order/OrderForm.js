@@ -76,7 +76,7 @@ export default function OrderForm(props) {
 useEffect(() => {
   if(orderId==0) resetFormContols()
   else {
-    reateAPIEndpoint(ENDPOINTS.ORDER)
+    createAPIEndpoint(ENDPOINTS.ORDER)
       .fetchById(orderId)
       .then((res) => {
         let customerList = res.data.map((item) => ({
