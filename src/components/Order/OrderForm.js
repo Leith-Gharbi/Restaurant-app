@@ -14,7 +14,8 @@ import { Input, Select, Button } from '../../components/controls';
 import { createAPIEndpoint, ENDPOINTS } from '../../api';
 import { roundTo2DecimalPoint } from '../../utils';
 import Popup from '../../layouts/Popup';
-import OrderList from "./OrderList";
+import OrderList from './OrderList';
+import Notification from '../../layouts/Notification';
 const pMethod = [
   { id: 'none', title: 'Select' },
   { id: 'Cash', title: 'Cash' },
@@ -42,15 +43,20 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 export default function OrderForm(props) {
-  const { values, setValues, errors, setErrors, handelInputChange ,resetFormContols } = props;
+  const {
+    values,
+    setValues,
+    errors,
+    setErrors,
+    handelInputChange,
+    resetFormContols,
+  } = props;
+
   const classes = useStyles();
-
   const [customerList, SetcustomerList] = useState([]);
-
-  const[orderListVisibility,setOrderListVisibility]= useState(false);
-  const[orderId,setOrderId]= useState(0);
-
-
+  const [orderListVisibility, setOrderListVisibility] = useState(false);
+  const [orderId, setOrderId] = useState(0);
+  const [notify, setNotify] = useState({ isOpen: false });
   useEffect(() => {
     createAPIEndpoint(ENDPOINTS.CUSTOMER)
       .fetchAll()
@@ -72,23 +78,18 @@ export default function OrderForm(props) {
     setValues({ ...values, gTotal: roundTo2DecimalPoint(gTotal) });
   }, [JSON.stringify(values.orderDetails)]);
 
-
-useEffect(() => {
-  if(orderId==0) resetFormContols()
-  else {
-    createAPIEndpoint(ENDPOINTS.ORDER)
-      .fetchById(orderId)
-      .then((res) => {
-        let customerList = res.data.map((item) => ({
-          id: item.customerId,
-          title: item.customerName,
-        }));
-        customerList = [{ id: 0, title: 'Select' }].concat(customerList);
-        SetcustomerList(customerList);
-      })
-      .catch((err) => console.log(err));
-  }
-}, [orderId])
+  useEffect(() => {
+    if (orderId == 0) resetFormContols();
+    else {
+      createAPIEndpoint(ENDPOINTS.ORDER)
+        .fetchById(orderId)
+        .then((res) => {
+          setValues(res.data);
+          setErrors({});
+        })
+        .catch((err) => console.log(err));
+    }
+  }, [orderId]);
 
   const validateForm = () => {
     let temp = {};
@@ -100,96 +101,129 @@ useEffect(() => {
     setErrors({ ...temp });
     return Object.values(temp).every((x) => x === '');
   };
+  const resetForm = () => {
+    resetFormContols();
+    setOrderId(0);
+  };
+
   const submitOrder = (e) => {
     e.preventDefault();
     if (validateForm()) {
-      console.log(values)
-      createAPIEndpoint(ENDPOINTS.ORDER)
-        .create(values)
-        .then((res) => {
-          console.log(res);
-          resetFormContols();
-        })
-        .catch((err) => console.log(err));
+      if (values.orderMasterId == 0) {
+        console.log(values);
+        createAPIEndpoint(ENDPOINTS.ORDER)
+          .create(values)
+          .then((res) => {
+            console.log(res);
+            resetFormContols();
+            setNotify({isOpen:true,message:'New order is created'});
+          })
+          .catch((err) => console.log(err));
+      } else {
+        console.log(values);
+        createAPIEndpoint(ENDPOINTS.ORDER)
+          .update(values.orderMasterId, values)
+          .then((res) => {
+            setOrderId(0);
+            setNotify({isOpen:true,message:'the order is updated'});
+
+          })
+          .catch((err) => console.log(err));
+      }
     }
   };
-  const openListOfOrders = () =>{
+  const openListOfOrders = () => {
     setOrderListVisibility(true);
-  }
+  };
   return (
     <>
-    <Form onSubmit={submitOrder}>
-      <Grid container>
-        <Grid item xs={6}>
-          <Input
-            label="Order Number"
-            name="orderNumber"
-            disabled
-            value={values.orderNumber}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment
-                  className={classes.adornmentText}
-                  position="start"
-                >
-                  #
-                </InputAdornment>
-              ),
-            }}
-          />
-          <Select
-            label="Customer"
-            name="customerId"
-            value={values.customerId}
-            onChange={handelInputChange}
-            options={customerList}
-            error={errors.customerId}
-          ></Select>
-        </Grid>
-        <Grid item xs={6}>
-          <Select
-            label="Payment Methode"
-            name="pMethod"
-            options={pMethod}
-            onChange={handelInputChange}
-            value={values.pMethod}
-            error={errors.pMethod}
-          ></Select>
-          <Input
-            label="Grand Total"
-            name="gTotal"
-            value={values.gTotal}
-            disabled
-            InputProps={{
-              startAdornment: (
-                <InputAdornment
-                  className={classes.adornmentText}
-                  position="start"
-                >
-                  $
-                </InputAdornment>
-              ),
-            }}
-          />
-          <ButtonGroup className={classes.submitbuttonGroup}>
-            <MuiButton
+      <Form onSubmit={submitOrder}>
+        <Grid container>
+          <Grid item xs={6}>
+            <Input
+              label="Order Number"
+              name="orderNumber"
+              disabled
+              value={values.orderNumber}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment
+                    className={classes.adornmentText}
+                    position="start"
+                  >
+                    #
+                  </InputAdornment>
+                ),
+              }}
+            />
+            <Select
+              label="Customer"
+              name="customerId"
+              value={values.customerId}
+              onChange={handelInputChange}
+              options={customerList}
+              error={errors.customerId}
+            ></Select>
+          </Grid>
+          <Grid item xs={6}>
+            <Select
+              label="Payment Methode"
+              name="pMethod"
+              options={pMethod}
+              onChange={handelInputChange}
+              value={values.pMethod}
+              error={errors.pMethod}
+            ></Select>
+            <Input
+              label="Grand Total"
+              name="gTotal"
+              value={values.gTotal}
+              disabled
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment
+                    className={classes.adornmentText}
+                    position="start"
+                  >
+                    $
+                  </InputAdornment>
+                ),
+              }}
+            />
+            <ButtonGroup className={classes.submitbuttonGroup}>
+              <MuiButton
+                size="large"
+                type="submit"
+                endIcon={<RestaurantMenuIcon />}
+              >
+                Submit
+              </MuiButton>
+              <MuiButton
+                size="small"
+                onClick={resetForm}
+                startIcon={<ReplayIcon />}
+              ></MuiButton>
+            </ButtonGroup>
+            <Button
               size="large"
-              type="submit"
-              endIcon={<RestaurantMenuIcon />}
+              onClick={openListOfOrders}
+              startIcon={<ReorderIcon></ReorderIcon>}
             >
-              Submit
-            </MuiButton>
-            <MuiButton size="small" startIcon={<ReplayIcon />}></MuiButton>
-          </ButtonGroup>
-          <Button size="large" onClick={openListOfOrders} startIcon={<ReorderIcon></ReorderIcon>}>
-            Orders
-          </Button>
+              Orders
+            </Button>
+          </Grid>
         </Grid>
-      </Grid>
-    </Form>
-    <Popup  title="List of Orders" openPopup={orderListVisibility} setOpenPopup={setOrderListVisibility}>
-<OrderList {...{setOrderId ,setOrderListVisibility}}/>
-    </Popup>
+      </Form>
+      <Popup
+        title="List of Orders"
+        openPopup={orderListVisibility}
+        setOpenPopup={setOrderListVisibility}
+      >
+        <OrderList {...{ setOrderId, setOrderListVisibility,resetFormContols,setNotify }} />
+      </Popup>
+      <Notification {...{notify,setNotify}}>
+        
+      </Notification>
     </>
   );
 }

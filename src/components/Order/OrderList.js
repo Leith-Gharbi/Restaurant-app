@@ -4,7 +4,7 @@ import { createAPIEndpoint, ENDPOINTS } from '../../api';
 import Table from '../../layouts/Table';
 import DeleteOutlineTwoToneIcon from '@material-ui/icons/DeleteOutlineTwoTone';
 export default function OrderList(props) {
-  const {setOrderId ,setOrderListVisibility} = props;
+  const {setOrderId ,setOrderListVisibility,resetFormContols,setNotify} = props;
   const [orderList, setOrderList] = useState([]);
   useEffect(() => {
     createAPIEndpoint(ENDPOINTS.ORDER)
@@ -19,6 +19,22 @@ export default function OrderList(props) {
   const showForUpdate = id =>{
     setOrderId(id);
     setOrderListVisibility(false);
+  }
+
+  const deleteOrder = id =>{
+      if(window.confirm('Are you sure to delete this record?')){
+        createAPIEndpoint(ENDPOINTS.ORDER)
+        .delete(id)
+        .then((res) => {
+          
+          setOrderListVisibility(false);
+          setOrderId(0);
+          resetFormContols();
+          setNotify({isOpen:true,message:'Deleted successfully'});
+
+        })
+        .catch((err) => console.log(err));
+      }
   }
   return (
     <Table>
@@ -39,7 +55,7 @@ export default function OrderList(props) {
             <TableCell onClick={ e => showForUpdate(item.orderMasterId)  }>{item.pMethod}</TableCell>
             <TableCell onClick={ e => showForUpdate(item.orderMasterId)  }>{item.gTotal}</TableCell>
             <TableCell>
-              <DeleteOutlineTwoToneIcon color="secondary" />
+              <DeleteOutlineTwoToneIcon color="secondary" onClick={e=>deleteOrder(item.orderMasterId)} />
             </TableCell>
           </TableRow>
         ))}
